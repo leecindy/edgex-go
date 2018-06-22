@@ -19,6 +19,7 @@ import (
 	"github.com/edgexfoundry/edgex-go/export/client/clients"
 	"github.com/go-zoo/bone"
 	"go.uber.org/zap"
+	"fmt"
 )
 
 const (
@@ -130,11 +131,11 @@ func addReg(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Name already taken", http.StatusBadRequest)
 		return
 	} else if err != clients.ErrNotFound {
+		fmt.Println("Error:", err)
 		logger.Error("Failed to query add registration", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
 	_, err = dbc.AddRegistration(&reg)
 	if err != nil {
 		logger.Error("Failed to query add registration", zap.Error(err))

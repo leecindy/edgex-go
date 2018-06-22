@@ -16,3 +16,13 @@ import:
 - package: gopkg.in/yaml.v2
 - package: github.com/mattn/go-xmpp
 - package: github.com/satori/go.uuid
+- package: github.com/flimzy/kivik
+  version: ^1.7.3
+- package: github.com/go-kivik/couchdb
+  version: ^1.7.2
+- package: github.com/imdario/mergo
+  version: ^0.3.5
+- package: github.com/pkg/errors
+  version: ^0.8.0
+- package: github.com/google/uuid
+  version: ^0.2.0

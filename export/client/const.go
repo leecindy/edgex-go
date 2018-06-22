@@ -10,13 +10,13 @@ type ConfigurationStruct struct {
 	Hostname             string
 	Port                 int
 	DBType               string
-	MongoURL             string
-	MongoUsername        string
-	MongoPassword        string
-	MongoDatabase        string
-	MongoPort            int
-	MongoConnectTimeout  int
-	MongoSocketTimeout   int
+	DBURL             string
+	DBUsername        string
+	DBPassword        string
+	Database        string
+	DBPort            int
+	ConnectTimeout  int
+	SocketTimeout   int
 	ConsulHost           string
 	ConsulPort           int
 	CheckInterval        string

@@ -57,12 +57,12 @@ func Init(conf ConfigurationStruct, l *zap.Logger) error {
 	// Create a database client
 	dbc, err = clients.NewDBClient(clients.DBConfiguration{
 		DbType:       clients.GetDatabaseType(conf.DBType),
-		Host:         conf.MongoURL,
-		Port:         conf.MongoPort,
-		Timeout:      conf.MongoConnectTimeout,
-		DatabaseName: conf.MongoDatabase,
-		Username:     conf.MongoUsername,
-		Password:     conf.MongoPassword,
+		Host:         conf.DBURL,
+		Port:         conf.DBPort,
+		Timeout:      conf.ConnectTimeout,
+		DatabaseName: conf.Database,
+		Username:     conf.DBUsername,
+		Password:     conf.DBPassword,
 	})
 	if err != nil {
 		return fmt.Errorf("couldn't connect to database: %v", err.Error())
