@@ -63,9 +63,15 @@ func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 }
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
+	fmt.Println("AddRegistration")//delete later
+
 	id := bson.NewObjectId()
 	cc.Database.Put(context.TODO(), id.Hex(), reg)
-	return id, nil
+
+	fmt.Println(reg.Name)
+	fmt.Println(reg.ID.Hex())
+//	fmt.Println(reg.Rev)
+	return reg.ID, nil
 }
 
 func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
@@ -73,12 +79,18 @@ func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
 	fmt.Println("ID ", reg.ID.Hex())//delete later
 	fmt.Println("name", reg.Name)//delete later
 	//fmt.Println("rev", reg.Rev)//delete later
-
+/*
 	_, err := cc.Database.Put(context.TODO(), reg.ID.Hex(), reg)
 	if err != nil {
 		panic(err)
 	}
-	//reg.Rev = newRev
+*/
+	//_,_ := cc.Database.Rev(context.TODO(), reg.ID.Hex())
+
+	cc.Database.Put(context.TODO(), reg.ID.Hex(), reg, )
+
+	
+
 	return  nil
 }
 
@@ -107,6 +119,13 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 }
 
 func (cc *CouchClient) DeleteRegistrationById(id string) error {
+	fmt.Println("DeleteRegistrationById", id)
+	_, err := cc.RegistrationById(id)
+	if err!= nil {
+		panic(err)
+	}
+	rev,_ := cc.Database.Rev(context.TODO(), id)
+	cc.Database.Delete(context.TODO(), id, rev)
 	return nil
 }
 
