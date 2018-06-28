@@ -20,6 +20,7 @@ import (
 
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
+	"fmt"
 )
 
 type memDB struct {
@@ -45,6 +46,7 @@ func (mc *memDB) AddRegistration(reg *export.Registration) (bson.ObjectId, error
 }
 
 func (mc *memDB) UpdateRegistration(reg export.Registration) error {
+	fmt.Println("2Calling update")
 	for i, r := range mc.regs {
 		if r.ID == reg.ID {
 			mc.regs[i] = reg

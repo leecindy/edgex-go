@@ -105,6 +105,7 @@ func getRegByName(w http.ResponseWriter, r *http.Request) {
 }
 
 func addReg(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("addReg1")
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("Failed to query add registration", zap.Error(err))
@@ -151,6 +152,7 @@ func addReg(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateReg(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("updateReg1") //delete later
 	data, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("Failed to read update registration", zap.Error(err))
@@ -165,16 +167,25 @@ func updateReg(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	fmt.Println("before check registration exists") //delete later
 	// Check if the registration exists
 	var toReg export.Registration
+	fmt.Println(fromReg.ID.Hex()) //delete later
+	fmt.Println(fromReg.Name) //delete later
 	if fromReg.ID != "" {
+		fmt.Println("HERERERERE ID") //delete later
 		toReg, err = dbc.RegistrationById(fromReg.ID.Hex())
+		fmt.Println("WHAT", toReg.ID.Hex()) //delete later
 	} else if fromReg.Name != "" {
+		fmt.Println("HERERERERE NAME") //delete later
 		toReg, err = dbc.RegistrationByName(fromReg.Name)
 	} else {
+		fmt.Println("HERERERERE ELSE") //delete later
 		http.Error(w, "Need id or name", http.StatusBadRequest)
 		return
 	}
+
+	fmt.Println("after check registration exists") //delete later
 
 	if err != nil {
 		logger.Error("Failed to query update registration", zap.Error(err))
@@ -211,12 +222,16 @@ func updateReg(w http.ResponseWriter, r *http.Request) {
 		toReg.Destination = fromReg.Destination
 	}
 
+	fmt.Println("Before validation")
 	if valid, err := toReg.Validate(); !valid {
 		logger.Error("Failed to validate registrations fields", zap.ByteString("data", data), zap.Error(err))
 		http.Error(w, "Could not validate json fields", http.StatusBadRequest)
 		return
 	}
+	fmt.Println("After validation")
 
+	fmt.Println("Beforing calling updateReg method")
+	toReg.ID = fromReg.ID
 	err = dbc.UpdateRegistration(toReg)
 	if err != nil {
 		logger.Error("Failed to query update registration", zap.Error(err))
