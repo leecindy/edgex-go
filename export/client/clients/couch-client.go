@@ -59,7 +59,23 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 }
 
 func (cc *CouchClient) Registrations() ([]export.Registration, error) {
-	return nil, nil
+	var regs []export.Registration
+	rows, err := cc.Database.AllDocs(context.TODO(), kivik.Options{"include_docs":true})
+	if err != nil {
+		return nil, err
+	}
+
+	for rows.Next() {
+		var reg export.Registration
+		err = rows.ScanDoc(&reg)
+		if err != nil {
+			return nil, err
+		}
+		reg.ID = bson.ObjectIdHex(rows.ID())
+		regs = append(regs, reg)
+	}
+
+	return regs, err
 }
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
