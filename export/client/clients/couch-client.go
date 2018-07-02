@@ -22,12 +22,29 @@ import (
 	_ "github.com/go-kivik/couchdb"
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
-	"fmt"
+	"github.com/edgexfoundry/edgex-go/core/domain/models"
 )
 
 type CouchClient struct {
 	Database *kivik.DB
 }
+
+type CouchRegistration struct {
+	ID          bson.ObjectId      			`bson:"_id,omitempty" json:"id,omitempty"`
+	Rev			string			   			`json:"_rev,omitempty" json:"rev,omitempty"` //required for update
+	Created     int64              			`json:"created"`
+	Modified    int64              			`json:"modified"`
+	Origin      int64              			`json:"origin"`
+	Name        string             			`json:"name,omitempty"`
+	Addressable models.Addressable 			`json:"addressable,omitempty"`
+	Format      string             			`json:"format,omitempty"`
+	Filter      export.Filter      			`json:"filter,omitempty"`
+	Encryption  export.EncryptionDetails	`json:"encryption,omitempty"`
+	Compression string           		    `json:"compression,omitempty"`
+	Enable      bool              		    `json:"enable"`
+	Destination string            		    `json:"destination,omitempty"`
+}
+
 
 // Return a pointer to the MongoClient
 func newCouchClient(config DBConfiguration) (*CouchClient, error) {
@@ -63,54 +80,55 @@ func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 }
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
-	fmt.Println("AddRegistration")//delete later
-
 	id := bson.NewObjectId()
 	cc.Database.Put(context.TODO(), id.Hex(), reg)
 
-	fmt.Println(reg.Name)
-	fmt.Println(reg.ID.Hex())
-//	fmt.Println(reg.Rev)
 	return reg.ID, nil
 }
 
+func ConvertToCouchReg(reg export.Registration) CouchRegistration{
+	var couchReg CouchRegistration
+	couchReg.ID = reg.ID
+	couchReg.Created = reg.Created
+	couchReg.Modified = reg.Modified
+	couchReg.Origin = reg.Origin
+	couchReg.Name = reg.Name
+	couchReg.Addressable = reg.Addressable
+	couchReg.Format = reg.Format
+	couchReg.Filter = reg.Filter
+	couchReg.Encryption = reg.Encryption
+	couchReg.Compression = reg.Compression
+	couchReg.Enable = reg.Enable
+	couchReg.Destination = reg.Destination
+	return couchReg
+}
+
 func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
-	fmt.Println("Calling update")//delete later
-	fmt.Println("ID ", reg.ID.Hex())//delete later
-	fmt.Println("name", reg.Name)//delete later
-	//fmt.Println("rev", reg.Rev)//delete later
-/*
-	_, err := cc.Database.Put(context.TODO(), reg.ID.Hex(), reg)
+	rev, err := cc.Database.Rev(context.TODO(), reg.ID.Hex())
 	if err != nil {
 		panic(err)
 	}
-*/
-	//_,_ := cc.Database.Rev(context.TODO(), reg.ID.Hex())
 
-	cc.Database.Put(context.TODO(), reg.ID.Hex(), reg, )
+	couchReg := ConvertToCouchReg(reg)
+	couchReg.Rev = rev
 
-	
+	cc.Database.Put(context.TODO(), reg.ID.Hex(), couchReg)
 
 	return  nil
 }
 
 func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
-	fmt.Println("RegistrationById", id) //delete later
 	var reg export.Registration
-	r, err := cc.Database.Get(context.TODO(), id)
+	row, err := cc.Database.Get(context.TODO(), id)
 	if err != nil {
 		panic(err)
 	}
 
-	err = r.ScanDoc(&reg);
+	err = row.ScanDoc(&reg);
 	if err != nil {
 		panic(err)
 	}
 
-	fmt.Println("2After Get ", reg.ID.Hex())//delete later
-	fmt.Println("2After Get ", reg.Name)//delete later
-	fmt.Println("2After Get ", reg.Enable)//delete later
-	//fmt.Println("2After Get ", reg.Rev)//delete later
 	return reg, err
 }
 
@@ -119,14 +137,14 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 }
 
 func (cc *CouchClient) DeleteRegistrationById(id string) error {
-	fmt.Println("DeleteRegistrationById", id)
 	_, err := cc.RegistrationById(id)
 	if err!= nil {
 		panic(err)
 	}
-	rev,_ := cc.Database.Rev(context.TODO(), id)
+
+	rev, err := cc.Database.Rev(context.TODO(), id)
 	cc.Database.Delete(context.TODO(), id, rev)
-	return nil
+	return err
 }
 
 func (cc *CouchClient) DeleteRegistrationByName(name string) error {
