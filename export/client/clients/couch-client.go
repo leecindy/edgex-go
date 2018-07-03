@@ -23,6 +23,7 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
+	"fmt"
 )
 
 type CouchClient struct {
@@ -149,7 +150,30 @@ func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
 }
 
 func (cc *CouchClient) RegistrationByName(name string) (export.Registration, error){
-	return export.Registration{}, ErrNotFound
+	var reg export.Registration
+	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
+	rows, err := cc.Database.Find(context.TODO(), findName)
+	fmt.Println(err)
+
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		err = rows.ScanDoc(&reg)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	fmt.Println("TotalRows:", rows.TotalRows())
+	fmt.Println("RegByName:", err)
+	fmt.Println("RegByName ID:", reg.ID.Hex())
+	if reg.ID.Hex() == "" {
+		return export.Registration{}, ErrNotFound
+	}
+
+	return reg, err
+
 }
 
 func (cc *CouchClient) DeleteRegistrationById(id string) error {
@@ -164,7 +188,19 @@ func (cc *CouchClient) DeleteRegistrationById(id string) error {
 }
 
 func (cc *CouchClient) DeleteRegistrationByName(name string) error {
-	return nil
+	var reg export.Registration
+	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
+	rows, err := cc.Database.Find(context.TODO(), findName)
+	if err != nil {
+		panic(err)
+	}
+	for rows.Next() {
+		err = rows.ScanDoc(&reg)
+		if err != nil {
+			panic(err)
+		}
+	}
+	return cc.DeleteRegistrationById(reg.ID.Hex())
 }
 
 func (cc *CouchClient) CloseSession() {
