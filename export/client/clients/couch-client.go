@@ -23,7 +23,6 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
-	"fmt"
 )
 
 type CouchClient struct {
@@ -98,6 +97,7 @@ func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
 	id := bson.NewObjectId()
+	reg.ID = id
 	cc.Database.Put(context.TODO(), id.Hex(), reg)
 
 	return reg.ID, nil
@@ -151,9 +151,9 @@ func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
 
 func (cc *CouchClient) RegistrationByName(name string) (export.Registration, error){
 	var reg export.Registration
+	//var regs []export.Registration
 	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
 	rows, err := cc.Database.Find(context.TODO(), findName)
-	fmt.Println(err)
 
 	if err != nil {
 		panic(err)
@@ -165,9 +165,6 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 		}
 	}
 
-	fmt.Println("TotalRows:", rows.TotalRows())
-	fmt.Println("RegByName:", err)
-	fmt.Println("RegByName ID:", reg.ID.Hex())
 	if reg.ID.Hex() == "" {
 		return export.Registration{}, ErrNotFound
 	}
