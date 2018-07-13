@@ -23,6 +23,7 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
+	"fmt"
 )
 
 type CouchClient struct {
@@ -30,7 +31,7 @@ type CouchClient struct {
 }
 
 type CouchRegistration struct {
-	ID          bson.ObjectId      			`bson:"_id,omitempty" json:"id,omitempty"`
+	ID          bson.ObjectId      			`bson:"_id,omitempty" json:"_id,omitempty"`
 	Rev			string			   			`json:"_rev,omitempty" json:"rev,omitempty"` //required for update
 	Created     int64              			`json:"created"`
 	Modified    int64              			`json:"modified"`
@@ -45,22 +46,40 @@ type CouchRegistration struct {
 	Destination string            		    `json:"destination,omitempty"`
 }
 
-
 // Return a pointer to the MongoClient
 func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	// Create the dial info for the Mongo session
 	connectionString := "http://" + config.Host + ":" + strconv.Itoa(config.Port)
 	client, err := kivik.New(context.TODO(), "couch", connectionString)
+
+	//usersDB, _ := client.DB(context.TODO(), "_users") // Connect to the _users database
+	//user := map[string]interface{}{
+	//	"_id":      kivik.UserPrefix + config.Username,
+	//	"type":     "user",
+	//	"password": config.Password,
+	//}
+	//
+	//usersDBExists, err := client.DBExists(context.TODO(), "_users")
+	//if err !=nil {
+	//	panic(err)
+	//}
+	//fmt.Println("usersDBExists", usersDBExists)
+	//
+	//if !usersDBExists {
+	//	err := client.CreateDB(context.TODO(), "_users")
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}
+	//
+	//usersDB.Put(context.TODO(), kivik.UserPrefix+config.Username, user)
+
+	clientExists, err := client.DBExists(context.TODO(), "test")
 	if err != nil {
 		panic(err)
 	}
 
-	exists, err := client.DBExists(context.TODO(), "test")
-	if err != nil {
-		panic(err)
-	}
-
-	if !exists {
+	if !clientExists {
 		err := client.CreateDB(context.TODO(), "test")
 		if err != nil {
 			panic(err)
@@ -71,6 +90,16 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	if err != nil {
 		panic(err)
 	}
+	//
+	//db.Put(context.TODO(), "_design/example", map[string]interface{}{
+	//	"_id": "_design/example",
+	//	"views": map[string]interface{}{
+	//		"new-view": map[string]interface{}{
+	//			"map": "function(doc){emit(doc._id, 1); emit(doc.name, 2);}",
+	//		},
+	//	},
+	//})
+
 
 	return &CouchClient{Database:db}, nil
 }
@@ -97,15 +126,15 @@ func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
 	id := bson.NewObjectId()
-	reg.ID = id
-	cc.Database.Put(context.TODO(), id.Hex(), reg)
 
+	cc.Database.Put(context.TODO(), id.Hex(), reg)
+	reg.ID = id
 	return reg.ID, nil
 }
 
 func ConvertToCouchReg(reg export.Registration) CouchRegistration{
 	var couchReg CouchRegistration
-	couchReg.ID = reg.ID
+	//couchReg.ID = reg.ID
 	couchReg.Created = reg.Created
 	couchReg.Modified = reg.Modified
 	couchReg.Origin = reg.Origin
@@ -119,6 +148,24 @@ func ConvertToCouchReg(reg export.Registration) CouchRegistration{
 	couchReg.Destination = reg.Destination
 	return couchReg
 }
+
+func ConvertToReg(testReg CouchRegistration) export.Registration{
+	var reg export.Registration
+	//couchReg.ID = reg.ID
+	reg.Created = testReg.Created
+	reg.Modified = testReg.Modified
+	reg.Origin = testReg.Origin
+	reg.Name = testReg.Name
+	reg.Addressable = testReg.Addressable
+	reg.Format = testReg.Format
+	reg.Filter = testReg.Filter
+	reg.Encryption = testReg.Encryption
+	reg.Compression = testReg.Compression
+	reg.Enable = testReg.Enable
+	reg.Destination = testReg.Destination
+	return reg
+}
+
 
 func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
 	rev, err := cc.Database.Rev(context.TODO(), reg.ID.Hex())
@@ -137,6 +184,7 @@ func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
 func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
 	var reg export.Registration
 	row, err := cc.Database.Get(context.TODO(), id)
+
 	if err != nil {
 		panic(err)
 	}
@@ -145,13 +193,13 @@ func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
 	if err != nil {
 		panic(err)
 	}
-
 	return reg, err
 }
 
 func (cc *CouchClient) RegistrationByName(name string) (export.Registration, error){
 	var reg export.Registration
-	//var regs []export.Registration
+	var newReg CouchRegistration
+
 	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
 	rows, err := cc.Database.Find(context.TODO(), findName)
 
@@ -159,17 +207,21 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 		panic(err)
 	}
 	for rows.Next() {
-		err = rows.ScanDoc(&reg)
+		err = rows.ScanDoc(&newReg)
+		fmt.Println(newReg)
 		if err != nil {
 			panic(err)
 		}
 	}
+	reg = ConvertToReg(newReg)
+	reg.ID = newReg.ID
 
 	if reg.ID.Hex() == "" {
 		return export.Registration{}, ErrNotFound
 	}
 
 	return reg, err
+
 
 }
 
@@ -186,17 +238,9 @@ func (cc *CouchClient) DeleteRegistrationById(id string) error {
 
 func (cc *CouchClient) DeleteRegistrationByName(name string) error {
 	var reg export.Registration
-	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
-	rows, err := cc.Database.Find(context.TODO(), findName)
-	if err != nil {
-		panic(err)
-	}
-	for rows.Next() {
-		err = rows.ScanDoc(&reg)
-		if err != nil {
-			panic(err)
-		}
-	}
+
+	reg, _ = cc.RegistrationByName(name)
+
 	return cc.DeleteRegistrationById(reg.ID.Hex())
 }
 
