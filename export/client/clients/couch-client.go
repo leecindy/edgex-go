@@ -24,6 +24,7 @@ import (
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
 	"fmt"
+	"time"
 )
 
 type CouchClient struct {
@@ -50,7 +51,11 @@ type CouchRegistration struct {
 func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	// Create the dial info for the Mongo session
 	connectionString := "http://" + config.Host + ":" + strconv.Itoa(config.Port)
-	client, err := kivik.New(context.TODO(), "couch", connectionString)
+
+	ctx1, cancel1 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel1()
+	client, err := kivik.New(ctx1, "couch", connectionString)
+
 
 	//usersDB, _ := client.DB(context.TODO(), "_users") // Connect to the _users database
 	//user := map[string]interface{}{
@@ -74,13 +79,17 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	//
 	//usersDB.Put(context.TODO(), kivik.UserPrefix+config.Username, user)
 
-	clientExists, err := client.DBExists(context.TODO(), "test")
+	ctx2, cancel2 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel2()
+	clientExists, err := client.DBExists(ctx2, "test")
 	if err != nil {
 		panic(err)
 	}
 
 	if !clientExists {
-		err := client.CreateDB(context.TODO(), "test")
+		ctx3, cancel3 := context.WithTimeout(context.Background(),(3 * time.Second))
+		defer cancel3()
+		err := client.CreateDB(ctx3, "test")
 		if err != nil {
 			panic(err)
 		}
