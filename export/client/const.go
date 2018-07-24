@@ -15,8 +15,8 @@ type ConfigurationStruct struct {
 	DBPassword        string
 	Database        string
 	DBPort            int
-	ConnectTimeout  int
-	SocketTimeout   int
+	DBConnectTimeout  int
+	DBSocketTimeout   int
 	ConsulHost           string
 	ConsulPort           int
 	CheckInterval        string

@@ -59,7 +59,7 @@ func Init(conf ConfigurationStruct, l *zap.Logger) error {
 		DbType:       clients.GetDatabaseType(conf.DBType),
 		Host:         conf.DBURL,
 		Port:         conf.DBPort,
-		Timeout:      conf.ConnectTimeout,
+		Timeout:      conf.DBConnectTimeout,
 		DatabaseName: conf.Database,
 		Username:     conf.DBUsername,
 		Password:     conf.DBPassword,
