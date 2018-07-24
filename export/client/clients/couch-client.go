@@ -23,6 +23,7 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
+	"time"
 	"fmt"
 )
 
@@ -49,64 +50,49 @@ type CouchRegistration struct {
 // Return a pointer to the MongoClient
 func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	// Create the dial info for the Mongo session
-	connectionString := "http://" + config.Host + ":" + strconv.Itoa(config.Port)
-	client, err := kivik.New(context.TODO(), "couch", connectionString)
 
-	//usersDB, _ := client.DB(context.TODO(), "_users") // Connect to the _users database
-	//user := map[string]interface{}{
-	//	"_id":      kivik.UserPrefix + config.Username,
-	//	"type":     "user",
-	//	"password": config.Password,
-	//}
-	//
-	//usersDBExists, err := client.DBExists(context.TODO(), "_users")
-	//if err !=nil {
-	//	panic(err)
-	//}
-	//fmt.Println("usersDBExists", usersDBExists)
-	//
-	//if !usersDBExists {
-	//	err := client.CreateDB(context.TODO(), "_users")
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}
-	//
-	//usersDB.Put(context.TODO(), kivik.UserPrefix+config.Username, user)
+	connectionString := "http://" + config.Username + ":" + config.Password + "@" + config.Host + ":" + strconv.Itoa(config.Port)
 
-	clientExists, err := client.DBExists(context.TODO(), "test")
+	timeout := 5000 * time.Millisecond
+
+	ctx1, cancel1 := context.WithTimeout(context.Background(), timeout)
+	defer cancel1()
+	client, err := kivik.New(ctx1, "couch", connectionString)
 	if err != nil {
-		panic(err)
+		fmt.Println("Error creating new client object")
+	}
+
+	ctx2, cancel2 := context.WithTimeout(context.Background(), timeout)
+	defer cancel2()
+	clientExists, err := client.DBExists(ctx2, "test")
+	if err != nil {
+		return nil, err
 	}
 
 	if !clientExists {
-		err := client.CreateDB(context.TODO(), "test")
+		ctx3, cancel3 := context.WithTimeout(context.Background(),timeout)
+		defer cancel3()
+		err := client.CreateDB(ctx3, "test")
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
-	db, err := client.DB(context.TODO(), "test")
+	ctx4, cancel4 := context.WithTimeout(context.Background(),timeout)
+	defer cancel4()
+	db, err := client.DB(ctx4, "test")
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
-	//
-	//db.Put(context.TODO(), "_design/example", map[string]interface{}{
-	//	"_id": "_design/example",
-	//	"views": map[string]interface{}{
-	//		"new-view": map[string]interface{}{
-	//			"map": "function(doc){emit(doc._id, 1); emit(doc.name, 2);}",
-	//		},
-	//	},
-	//})
-
 
 	return &CouchClient{Database:db}, nil
 }
 
 func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 	var regs []export.Registration
-	rows, err := cc.Database.AllDocs(context.TODO(), kivik.Options{"include_docs":true})
+	ctx, cancel := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel()
+	rows, err := cc.Database.AllDocs(ctx, kivik.Options{"include_docs":true})
 	if err != nil {
 		return nil, err
 	}
@@ -126,15 +112,15 @@ func (cc *CouchClient) Registrations() ([]export.Registration, error) {
 
 func (cc *CouchClient) AddRegistration(reg *export.Registration) (bson.ObjectId, error){
 	id := bson.NewObjectId()
-
-	cc.Database.Put(context.TODO(), id.Hex(), reg)
+	ctx, cancel := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel()
+	cc.Database.Put(ctx, id.Hex(), reg)
 	reg.ID = id
 	return reg.ID, nil
 }
 
 func ConvertToCouchReg(reg export.Registration) CouchRegistration{
 	var couchReg CouchRegistration
-	//couchReg.ID = reg.ID
 	couchReg.Created = reg.Created
 	couchReg.Modified = reg.Modified
 	couchReg.Origin = reg.Origin
@@ -151,7 +137,6 @@ func ConvertToCouchReg(reg export.Registration) CouchRegistration{
 
 func ConvertToReg(testReg CouchRegistration) export.Registration{
 	var reg export.Registration
-	//couchReg.ID = reg.ID
 	reg.Created = testReg.Created
 	reg.Modified = testReg.Modified
 	reg.Origin = testReg.Origin
@@ -168,30 +153,35 @@ func ConvertToReg(testReg CouchRegistration) export.Registration{
 
 
 func (cc *CouchClient) UpdateRegistration(reg export.Registration) error{
-	rev, err := cc.Database.Rev(context.TODO(), reg.ID.Hex())
+	ctx1, cancel1 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel1()
+	rev, err := cc.Database.Rev(ctx1, reg.ID.Hex())
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	couchReg := ConvertToCouchReg(reg)
 	couchReg.Rev = rev
 
-	cc.Database.Put(context.TODO(), reg.ID.Hex(), couchReg)
+	ctx2, cancel2 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel2()
+	cc.Database.Put(ctx2, reg.ID.Hex(), couchReg)
 
 	return  nil
 }
 
 func (cc *CouchClient) RegistrationById(id string) (export.Registration, error){
 	var reg export.Registration
-	row, err := cc.Database.Get(context.TODO(), id)
-
+	ctx, cancel := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel()
+	row, err := cc.Database.Get(ctx, id)
 	if err != nil {
-		panic(err)
+		return export.Registration{}, err
 	}
 
 	err = row.ScanDoc(&reg);
 	if err != nil {
-		panic(err)
+		return export.Registration{}, err
 	}
 	return reg, err
 }
@@ -201,16 +191,17 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 	var newReg CouchRegistration
 
 	findName := map[string]interface{}{"selector": map[string]interface{}{"name": map[string]interface{}{"$eq": name}}}
-	rows, err := cc.Database.Find(context.TODO(), findName)
+	ctx, cancel := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel()
+	rows, err := cc.Database.Find(ctx, findName)
 
 	if err != nil {
-		panic(err)
+		return export.Registration{}, err
 	}
 	for rows.Next() {
 		err = rows.ScanDoc(&newReg)
-		fmt.Println(newReg)
 		if err != nil {
-			panic(err)
+			return export.Registration{}, err
 		}
 	}
 	reg = ConvertToReg(newReg)
@@ -222,25 +213,30 @@ func (cc *CouchClient) RegistrationByName(name string) (export.Registration, err
 
 	return reg, err
 
-
 }
 
 func (cc *CouchClient) DeleteRegistrationById(id string) error {
 	_, err := cc.RegistrationById(id)
 	if err!= nil {
-		panic(err)
+		return err
 	}
+	ctx1, cancel1 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel1()
+	rev, err := cc.Database.Rev(ctx1, id)
 
-	rev, err := cc.Database.Rev(context.TODO(), id)
-	cc.Database.Delete(context.TODO(), id, rev)
+	ctx2, cancel2 := context.WithTimeout(context.Background(),(3 * time.Second))
+	defer cancel2()
+	cc.Database.Delete(ctx2, id, rev)
 	return err
 }
 
 func (cc *CouchClient) DeleteRegistrationByName(name string) error {
 	var reg export.Registration
-
-	reg, _ = cc.RegistrationByName(name)
-
+	var err error
+	reg, err = cc.RegistrationByName(name)
+	if err != nil{
+		return err
+	}
 	return cc.DeleteRegistrationById(reg.ID.Hex())
 }
 

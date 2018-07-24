@@ -12,8 +12,9 @@
 #  * the License.
 #  *
 #  * @author: Jim White, Dell
-#  * EdgeX Foundry, California version, 0.6.0
-#  * added: Jul 2, 2018
+#  * EdgeX Foundry, California Preview, version 0.5.0
+#  * added: Feb 3, 2018
+#  * updated:  Feb 12, 2018 - added env to export services to allow them to work properly
 #  *******************************************************************************/
 
 version: '3'
@@ -34,14 +35,15 @@ services:
       - log-data:/edgex/logs
       - consul-config:/consul/config
       - consul-data:/consul/data
-      
-  consul:
-    image: consul:1.1.0
+
+  config-seed:
+    image: edgexfoundry/docker-core-config-seed
     ports:
+      - "8300:8300"
       - "8400:8400"
       - "8500:8500"
       - "8600:8600"
-    container_name: edgex-core-consul
+    container_name: edgex-config-seed
     hostname: edgex-core-consul
     networks:
       edgex-network:
@@ -53,27 +55,10 @@ services:
       - consul-config:/consul/config
       - consul-data:/consul/data
     depends_on:
-      - volume  
-
-  config-seed:
-    image: edgexfoundry/docker-core-config-seed-go:0.6.0
-    container_name: edgex-config-seed
-    hostname: edgex-core-config-seed
-    networks:
-      edgex-network:
-        aliases:
-            - edgex-core-config-seed
-    volumes:
-      - db-data:/data/db
-      - log-data:/edgex/logs
-      - consul-config:/consul/config
-      - consul-data:/consul/data
-    depends_on:
       - volume
-      - consul
       
   mongo:
-    image: edgexfoundry/docker-edgex-mongo:0.6.0
+    image: edgexfoundry/docker-edgex-mongo
     ports:
       - "27017:27017"
     container_name: edgex-mongo
@@ -89,7 +74,7 @@ services:
       - volume
 
   logging:
-    image: edgexfoundry/docker-support-logging-go:0.6.0
+    image: edgexfoundry/docker-support-logging-go
     ports:
       - "48061:48061"
     container_name: edgex-support-logging
@@ -107,7 +92,7 @@ services:
       - volume
 
   notifications:
-    image: edgexfoundry/docker-support-notifications:0.6.0
+    image: edgexfoundry/docker-support-notifications
     ports:
       - "48060:48060"
     container_name: edgex-support-notifications
@@ -123,7 +108,7 @@ services:
       - logging
 
   metadata:
-    image: edgexfoundry/docker-core-metadata-go:0.6.0
+    image: edgexfoundry/docker-core-metadata-go:e1a9581
     ports:
       - "48081:48081"
     container_name: edgex-core-metadata
@@ -139,7 +124,7 @@ services:
       - logging
 
   data:
-    image: edgexfoundry/docker-core-data-go:0.6.0
+    image: edgexfoundry/docker-core-data-go:e1a9581
     ports:
       - "48080:48080"
       - "5563:5563"
@@ -156,7 +141,7 @@ services:
       - logging
 
   command:
-    image: edgexfoundry/docker-core-command-go:0.6.0
+    image: nexus3.edgexfoundry.org:10004/docker-core-command-go
     ports:
       - "48082:48082"
     container_name: edgex-core-command
@@ -173,7 +158,7 @@ services:
 
 # scheduler container does not come up on Consul - bug fix in the works.
   scheduler:
-    image: edgexfoundry/docker-support-scheduler:0.6.0
+    image: edgexfoundry/docker-support-scheduler
     ports:
       - "48085:48085"
     container_name: edgex-support-scheduler
@@ -189,7 +174,7 @@ services:
       - metadata
 
   export-client:
-    image: edgexfoundry/docker-export-client-go:0.6.0
+    image: nexus3.edgexfoundry.org:10004/docker-export-client-go
     ports:
       - "48071:48071"
     container_name: edgex-export-client
@@ -209,7 +194,7 @@ services:
       - EXPORT_CLIENT_CONSUL_HOST=edgex-config-seed
 
   export-distro:
-    image: edgexfoundry/docker-export-distro-go:0.6.0
+    image: edgexfoundry/docker-export-distro
     ports:
       - "48070:48070"
     container_name: edgex-export-distro
@@ -231,7 +216,7 @@ services:
       - EXPORT_DISTRO_MQTTS_KEY_FILE=none
 
   rulesengine:
-    image: edgexfoundry/docker-support-rulesengine:0.6.0
+    image: edgexfoundry/docker-support-rulesengine
     ports:
       - "48075:48075"
     container_name: edgex-support-rulesengine
@@ -246,8 +231,12 @@ services:
     depends_on:
       - export-distro
 
+#################################################################
+# Device Services
+#################################################################
+
   device-virtual:
-    image: edgexfoundry/docker-device-virtual:0.6.0
+    image: edgexfoundry/docker-device-virtual
     ports:
       - "49990:49990"
     container_name: edgex-device-virtual
@@ -262,48 +251,13 @@ services:
     depends_on:
       - data
       - command
-
-  mqtt:
-      image: ncarlier/mqtt
-      ports:
-        - "1883:1883"
-      container_name: mqtt
-      hostname: mqtt
-      networks:
-        edgex-network:
-          aliases:
-              - mqtt
-
-  influxdb:
-      image: influxdb
-      container_name: influxdb
-      hostname: influxdb
-      networks:
-        edgex-network:
-          aliases:
-              - influxdb
-
-  ingress:
-      image: 10.76.48.106:5000/repository/pandora/edgex-ingress-go:latest
-      container_name: ingress
-      hostname: ingress
-      networks:
-        edgex-network:
-          aliases:
-              - ingress
-
-  egress:
-      image: 10.76.48.106:5000/repository/pandora/edgex-egress-go:latest
-      container_name: egress
-      hostname: egress
-      networks:
-        edgex-network:
-          aliases:
-              - egress
-
+      - scheduler
+      - notifications
 
 
 networks:
   edgex-network:
     driver: "bridge"
 ...
+
+

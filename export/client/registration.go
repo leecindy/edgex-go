@@ -51,7 +51,6 @@ func getRegByID(w http.ResponseWriter, r *http.Request) {
 
 func getRegList(w http.ResponseWriter, r *http.Request) {
 	t := bone.GetValue(r, "type")
-
 	var list []string
 
 	switch t {
