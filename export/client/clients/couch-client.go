@@ -23,8 +23,8 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
-	"time"
 	"fmt"
+	"time"
 )
 
 type CouchClient struct {
