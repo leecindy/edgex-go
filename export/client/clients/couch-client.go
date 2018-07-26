@@ -23,7 +23,6 @@ import (
 	"github.com/edgexfoundry/edgex-go/export"
 	"gopkg.in/mgo.v2/bson"
 	"github.com/edgexfoundry/edgex-go/core/domain/models"
-	"fmt"
 	"time"
 )
 
@@ -60,12 +59,12 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	defer cancel1()
 	client, err := kivik.New(ctx1, "couch", connectionString)
 	if err != nil {
-		fmt.Println("Error creating new client object")
+		return nil, err
 	}
 
 	ctx2, cancel2 := context.WithTimeout(context.Background(), timeout)
 	defer cancel2()
-	clientExists, err := client.DBExists(ctx2, "test")
+	clientExists, err := client.DBExists(ctx2, config.DatabaseName)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +72,7 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 	if !clientExists {
 		ctx3, cancel3 := context.WithTimeout(context.Background(),timeout)
 		defer cancel3()
-		err := client.CreateDB(ctx3, "test")
+		err := client.CreateDB(ctx3, config.DatabaseName)
 		if err != nil {
 			return nil, err
 		}
@@ -81,7 +80,7 @@ func newCouchClient(config DBConfiguration) (*CouchClient, error) {
 
 	ctx4, cancel4 := context.WithTimeout(context.Background(),timeout)
 	defer cancel4()
-	db, err := client.DB(ctx4, "test")
+	db, err := client.DB(ctx4, config.DatabaseName)
 	if err != nil {
 		return nil, err
 	}

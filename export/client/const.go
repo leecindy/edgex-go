@@ -13,7 +13,7 @@ type ConfigurationStruct struct {
 	DBURL             string
 	DBUsername        string
 	DBPassword        string
-	Database        string
+	DBDatabase        string
 	DBPort            int
 	DBConnectTimeout  int
 	DBSocketTimeout   int

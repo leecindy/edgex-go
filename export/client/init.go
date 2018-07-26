@@ -60,7 +60,7 @@ func Init(conf ConfigurationStruct, l *zap.Logger) error {
 		Host:         conf.DBURL,
 		Port:         conf.DBPort,
 		Timeout:      conf.DBConnectTimeout,
-		DatabaseName: conf.Database,
+		DatabaseName: conf.DBDatabase,
 		Username:     conf.DBUsername,
 		Password:     conf.DBPassword,
 	})
